@@ -13,12 +13,18 @@ SYMBOL_DIR = Path(__file__).parent.parent / "assets" / "symbols"
 MATCH_THRESHOLD = 0.75
 
 
+def _imread(path: str, flags=cv2.IMREAD_COLOR) -> np.ndarray | None:
+    """cv2.imread의 한글/유니코드 경로 대응 버전."""
+    buf = np.fromfile(path, dtype=np.uint8)
+    return cv2.imdecode(buf, flags)
+
+
 def load_templates() -> dict[str, np.ndarray]:
     """assets/symbols/ 의 PNG 파일들을 템플릿으로 로드."""
     templates = {}
     if SYMBOL_DIR.exists():
         for p in SYMBOL_DIR.glob("*.png"):
-            img = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE)
+            img = _imread(str(p), cv2.IMREAD_GRAYSCALE)
             if img is not None:
                 templates[p.stem] = img
     return templates
@@ -30,7 +36,7 @@ def detect_switches(png_path: str) -> list[dict]:
     반환: [{"label": str, "x": int, "y": int, "w": int, "h": int}, ...]
     """
     templates = load_templates()
-    img = cv2.imread(png_path, cv2.IMREAD_GRAYSCALE)
+    img = _imread(png_path, cv2.IMREAD_GRAYSCALE)
     if img is None:
         raise FileNotFoundError(f"PNG 파일을 열 수 없습니다: {png_path}")
 
@@ -58,7 +64,7 @@ def detect_lines(png_path: str) -> list[dict]:
     Hough 변환으로 수평/수직 선로 검출.
     반환: [{"x1":int,"y1":int,"x2":int,"y2":int,"type":"solid"|"dashed"}, ...]
     """
-    img = cv2.imread(png_path, cv2.IMREAD_GRAYSCALE)
+    img = _imread(png_path, cv2.IMREAD_GRAYSCALE)
     if img is None:
         return []
 
