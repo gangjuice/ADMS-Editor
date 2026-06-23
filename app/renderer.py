@@ -3,8 +3,22 @@
 """
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw
 from .graph import SchematicGraph, Switch
+
+
+def _imread(path: str) -> np.ndarray | None:
+    """cv2.imread의 한글/유니코드 경로 대응 버전."""
+    buf = np.fromfile(path, dtype=np.uint8)
+    return cv2.imdecode(buf, cv2.IMREAD_COLOR)
+
+
+def _imwrite(path: str, img: np.ndarray):
+    """cv2.imwrite의 한글/유니코드 경로 대응 버전."""
+    ext = path.rsplit('.', 1)[-1].lower()
+    ok, buf = cv2.imencode(f'.{ext}', img)
+    if not ok:
+        raise IOError(f"이미지 인코딩 실패: {path}")
+    buf.tofile(path)
 
 
 TERMINAL_RADIUS = 10
@@ -14,7 +28,7 @@ SWITCH_BODY_RADIUS = 22
 
 def render_to_png(base_png: str, graph: SchematicGraph, output_path: str):
     """원본 PNG를 배경으로 그래프 상태를 오버레이하여 저장."""
-    img = cv2.imread(base_png)
+    img = _imread(base_png)
     if img is None:
         raise FileNotFoundError(f"배경 PNG를 열 수 없습니다: {base_png}")
 
@@ -37,7 +51,7 @@ def render_to_png(base_png: str, graph: SchematicGraph, output_path: str):
     for sw in graph.switches.values():
         _draw_switch(overlay, sw)
 
-    cv2.imwrite(output_path, overlay)
+    _imwrite(output_path, overlay)
 
 
 def _draw_switch(img: np.ndarray, sw: Switch):
