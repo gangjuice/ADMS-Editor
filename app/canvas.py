@@ -34,12 +34,19 @@ class SchematicCanvas(QWidget):
         self.setCursor(Qt.CursorShape.CrossCursor)
 
     def load(self, png_path: str, graph: SchematicGraph):
-        # QPixmap(path)는 Windows 한글 경로에서 조용히 실패하므로
-        # Python I/O로 바이트를 읽어 loadFromData로 로드
-        with open(png_path, 'rb') as f:
-            data = f.read()
-        self.pixmap = QPixmap()
-        self.pixmap.loadFromData(data)
+        # Qt PNG 플러그인 누락 문제를 우회: cv2로 읽어 QImage 직접 생성
+        import cv2
+        import numpy as np
+        from PyQt6.QtGui import QImage
+        buf = np.fromfile(png_path, dtype=np.uint8)
+        img_bgr = cv2.imdecode(buf, cv2.IMREAD_COLOR)
+        if img_bgr is not None:
+            img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+            h, w, c = img_rgb.shape
+            qimg = QImage(img_rgb.tobytes(), w, h, w * c, QImage.Format.Format_RGB888)
+            self.pixmap = QPixmap.fromImage(qimg)
+        else:
+            self.pixmap = None
         self.graph = graph
         self.scale = 1.0
         self.offset = QPoint(0, 0)
