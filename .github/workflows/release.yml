@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create tag (dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.tag }} || true
+          git push origin ${{ steps.version.outputs.tag }} || true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ADMS-Editor ${{ steps.version.outputs.tag }}
+          body: |
+            ## ADMS-Editor ${{ steps.version.outputs.tag }}
+
+            배전 설비계통도 PNG 편집 툴
+
+            ### 주요 기능
+            - PNG 계통도 불러오기 + OpenCV 개폐기 자동인식
+            - 단자 클릭 → 투개방 상태 토글 (빨강=투입 / 초록=개방)
+            - 선로 클릭 → 개폐기 N대 삽입
+            - 편집 결과를 PNG + JSON 사이드카로 저장
+            - JSON 사이드카가 있으면 재불러오기 시 편집 상태 복원
+
+            ### 설치 및 실행
+            ```bash
+            pip install -r requirements.txt
+            python main.py
+            ```
+
+            ### 조작법
+
+            | 동작 | 설명 |
+            |---|---|
+            | 좌클릭 (단자) | 투개방 토글 |
+            | 좌클릭 (선로) | 개폐기 삽입 수 입력 후 삽입 |
+            | 휠 | 확대/축소 |
+            | 중클릭 드래그 | 화면 이동 |
+            | Ctrl+O | PNG 열기 |
+            | Ctrl+S | 저장 |
+            | Ctrl+Shift+S | 다른 이름으로 저장 |
+          draft: false
+          prerelease: false
