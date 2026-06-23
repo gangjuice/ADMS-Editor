@@ -34,7 +34,12 @@ class SchematicCanvas(QWidget):
         self.setCursor(Qt.CursorShape.CrossCursor)
 
     def load(self, png_path: str, graph: SchematicGraph):
-        self.pixmap = QPixmap(png_path)
+        # QPixmap(path)는 Windows 한글 경로에서 조용히 실패하므로
+        # Python I/O로 바이트를 읽어 loadFromData로 로드
+        with open(png_path, 'rb') as f:
+            data = f.read()
+        self.pixmap = QPixmap()
+        self.pixmap.loadFromData(data)
         self.graph = graph
         self.scale = 1.0
         self.offset = QPoint(0, 0)
@@ -43,7 +48,7 @@ class SchematicCanvas(QWidget):
     # ── 렌더링 ──────────────────────────────────────────────
 
     def paintEvent(self, event):
-        if not self.pixmap or not self.graph:
+        if self.pixmap is None or self.pixmap.isNull() or self.graph is None:
             return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
